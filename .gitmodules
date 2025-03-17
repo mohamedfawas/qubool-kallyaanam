@@ -1,0 +1,12 @@
+[submodule "admin-service-qubool-kallyaanam"]
+	path = admin-service-qubool-kallyaanam
+	url = https://github.com/mohamedfawas/admin-service-qubool-kallyaanam.git
+[submodule "auth-service-qubool-kallyaanam"]
+	path = auth-service-qubool-kallyaanam
+	url = https://github.com/mohamedfawas/auth-service-qubool-kallyaanam.git
+[submodule "api-gateway-qubool-kallyaanam"]
+	path = api-gateway-qubool-kallyaanam
+	url = https://github.com/mohamedfawas/api-gateway-qubool-kallyaanam.git
+[submodule "user-service-qubool-kallyaanam"]
+	path = user-service-qubool-kallyaanam
+	url = https://github.com/mohamedfawas/user-service-qubool-kallyaanam.git
