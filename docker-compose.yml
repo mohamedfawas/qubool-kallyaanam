@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:13-alpine
+    container_name: qubool-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: auth_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:6-alpine
+    container_name: qubool-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  auth-service:
+    build:
+      context: ./auth-service-qubool-kallyaanam
+      dockerfile: Dockerfile
+    container_name: qubool-auth-service
+    environment:
+      - DB_HOST=postgres
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=auth_db
+      - DB_PORT=5432
+      - REDIS_ADDR=redis:6379
+      - JWT_SECRET=your_secret_key
+      - JWT_ISSUER=auth-service
+      - PORT=8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+  
+  api-gateway:
+    build:
+      context: ./api-gateway-qubool-kallyaanam
+      dockerfile: Dockerfile
+    container_name: qubool-api-gateway
+    environment:
+      - PORT=8000
+      - AUTH_SERVICE_URL=http://auth-service:8080
+    ports:
+      - "8000:8000"
+    depends_on:
+      - auth-service
+
+volumes:
+  postgres_data:
+  redis_data:
