@@ -1,0 +1,165 @@
+services:
+  # API Gateway
+  api-gateway:
+    build:
+      context: ./api-gateway-qubool-kallyaanam
+    ports:
+      - "8080:8080"
+    environment:
+      - GOPROXY=direct
+      - AUTH_SERVICE_URL=http://auth-service:8081
+      - USER_SERVICE_URL=http://user-service:8082
+      - ADMIN_SERVICE_URL=http://admin-service:8083
+    depends_on:
+      auth-service:
+        condition: service_healthy
+      user-service:
+        condition: service_healthy
+      admin-service:
+        condition: service_healthy
+    networks:
+      - qubool-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://api-gateway:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # Auth Service
+  auth-service:
+    build:
+      context: ./auth-service-qubool-kallyaanam
+    ports:
+      - "8081:8081"
+    environment:
+      - GOPROXY=direct
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=auth_db
+      - REDIS_URI=redis://redis:6379/1
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - qubool-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://auth-service:8081/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # User Service
+  user-service:
+    build:
+      context: ./user-service-qubool-kallyaanam
+    ports:
+      - "8082:8082"
+    environment:
+      - GOPROXY=direct
+      - MONGO_URI=mongodb://mongo:27017/user_db
+      - REDIS_URI=redis://redis:6379/0
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=user_db
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    networks:
+      - qubool-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://user-service:8082/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # Admin Service
+  admin-service:
+    build:
+      context: ./admin-service-qubool-kallyaanam
+    ports:
+      - "8083:8083"
+    environment:
+      - GOPROXY=direct
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=admin_db
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - qubool-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://admin-service:8083/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # PostgreSQL - removed port exposure
+  postgres:
+    image: postgres:14-alpine
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - qubool-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # MongoDB - removed port exposure
+  mongo:
+    image: mongo:6-jammy
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - qubool-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # Redis - removed port exposure
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    networks:
+      - qubool-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+networks:
+  qubool-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  mongo_data:
+  redis_data:
